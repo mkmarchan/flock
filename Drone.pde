@@ -17,7 +17,7 @@ class Drone extends Positional {
     
     float[] pos = getPosition();
     for (int i = 0; i < pos.length; i++) {
-      pos[i] = ((pos[i] + vel[i] + cubeLength / 2) % cubeLength + cubeLength) % cubeLength - cubeLength / 2;
+      pos[i] = CubeWrap(pos[i] + vel[i], cubeLength);
     }
   }
   
@@ -25,21 +25,17 @@ class Drone extends Positional {
     if (vel.length != 2 && vel.length != 3) {
       throw new RuntimeException("Only 2  or 3 dimensional drones can be displayed");
     }
-    pushMatrix();
     float[] pos = getPosition();
     if (pos.length == 2) {
-      translate(pos[0], pos[1]);
-      ArrayList<Drone> nearby = nTree.queryRange(new AABC(pos, interactionRadius));
-      for (Drone d : nearby) {
+      
+      for (Drone d : getWrappedNearby(nTree)) {
         float[] nearbyPos = d.getPosition();
-        float dist;
-        if (d == this || (dist = dist(pos, nearbyPos)) > interactionRadius) {
-          continue;
-        }
+        float dist = Dist(pos, nearbyPos, cubeLength);
+        float[] minDistPoint = getMinDistPoint(d);
         
-        stroke(255 * (1.0 - pow(dist / interactionRadius, 2)));
-        line(nearbyPos[0], nearbyPos[1], pos[0], pos[1]);
-        
+        float opacity = 255 * (1.0 - pow(dist / interactionRadius, 2));
+        stroke(255, opacity);
+        line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
       }
       
       fill(255);
@@ -49,6 +45,49 @@ class Drone extends Positional {
       // TODO
       translate(pos[0], pos[1], pos[2]);
     }
-    popMatrix();
+  }
+  
+  private Set<Drone> getWrappedNearby(NTree<Drone> nTree) {
+    float[] pos = getPosition();
+    ArrayList<Drone> candidates = new ArrayList<Drone>();
+    Set<Drone> nearby = new HashSet<Drone>();
+    
+    candidates.addAll(nTree.queryRange(new AABC(pos, interactionRadius)));
+    boolean[] dimWraps = new boolean[pos.length];
+    
+    for (int i = 0; i < pos.length; i++) {
+      if (abs(cubeLength / 2) - abs(pos[i]) < interactionRadius) {
+        dimWraps[i] = true;
+      }
+    }
+    
+    // TODO: use dimwraps to optimize this, currently adding multiple times
+    for (int i = 0; i < pow(2, pos.length); i++) {
+      float[] newCenter = new float[pos.length];
+      for (int j = 0; j < newCenter.length; j++) {
+        int mult = (i / (int) pow(2, j)) % 2 == 0 ? 1 : -1;
+        newCenter[j] = pos[j] * mult;
+      }
+      candidates.addAll(nTree.queryRange(new AABC(newCenter, interactionRadius)));
+    }
+    for (Drone d : candidates) {
+      if (d != this && !nearby.contains(d) && Dist(pos, d.getPosition(), cubeLength) <= interactionRadius) {
+        nearby.add(d);
+      }
+    }
+    
+    return nearby;
+  }
+  
+  private float[] getMinDistPoint(Drone d) {
+    float[] pos = getPosition();
+    float[] dPos = d.getPosition();
+    float[] minDistPoint = new float[pos.length];
+    
+    for (int i = 0; i < pos.length; i++) {
+      float reflectionCoord = Math.signum(pos[i] - dPos[i]) * cubeLength + dPos[i];
+      minDistPoint[i] = abs(reflectionCoord - pos[i]) > abs(dPos[i] - pos[i]) ? dPos[i] : reflectionCoord;
+    }
+    return minDistPoint;
   }
 }

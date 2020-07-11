@@ -1,16 +1,17 @@
+import java.util.*;
+
 int dimensions = 2;
 int cubeLength = 400;
-int numDrones = 40;
-float droneRadius = 10;
+int numDrones = 50;
+float droneRadius = 0;
 float interactionRadius = 100;
 
 Drone[] drones;
 NTree nTree;
 
 void setup() {
-  size(800, 800);
+  size(400, 400);
   
-  print(-1 % 10);
   nTree = new NTree(dimensions, cubeLength / 2);
   
   drones = new Drone[numDrones];
@@ -21,7 +22,7 @@ void setup() {
     
     for (int j = 0; j < dimensions; j++) {
       pos[j] = random(cubeLength) - cubeLength / 2;
-      vel[j] = random(1) - 0.5;
+      vel[j] = random(0.5) - 0.25;
       acc[j] = 0;
     }
     
@@ -33,6 +34,8 @@ void draw() {
   background(0);
   
   translate(width / 2, height / 2);
+  
+  fill(255);
   
   nTree.clear();
   for (int i = 0; i < drones.length; i++) {
@@ -47,4 +50,5 @@ void draw() {
   for (int i = 0; i < drones.length; i++) {
     drones[i].display();
   }
+  println(frameRate);
 }
