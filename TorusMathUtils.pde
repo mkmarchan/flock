@@ -6,7 +6,7 @@ static float CubeWrap(float a, float cubeLength) {
   return NonNegMod(a + cubeLength / 2, cubeLength) - cubeLength / 2;
 }
 
-static float Dist(float[] a, float[] b, float cubeLength) {
+static float WrappedDist(float[] a, float[] b, float cubeLength) {
   if (a.length != b.length) {
     throw new RuntimeException("Mismatched dimensions");
   }
@@ -17,6 +17,14 @@ static float Dist(float[] a, float[] b, float cubeLength) {
     float wrapDimDiff = min(absDimDiff, cubeLength - absDimDiff);
     sum += pow(wrapDimDiff, 2);
     
+  }
+  return sqrt(sum);
+}
+
+static float Dist(float[] a, float[] b) {
+  float sum = 0;
+  for (int i = 0; i < a.length; i++) {
+    sum += pow(a[i] - b[i], 2);
   }
   return sqrt(sum);
 }

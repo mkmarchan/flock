@@ -1,9 +1,9 @@
 import java.util.*;
 
 int dimensions = 2;
-int cubeLength = 400;
+int cubeLength = 500;
 int numDrones = 50;
-float droneRadius = 0;
+float droneRadius = 5;
 float interactionRadius = 100;
 
 Drone[] drones;
@@ -19,10 +19,11 @@ void setup() {
     float[] pos = new float[dimensions];
     float[] vel = new float[dimensions];
     float[] acc = new float[dimensions];
-    
+
+    float temp = random(0.5);
     for (int j = 0; j < dimensions; j++) {
       pos[j] = random(cubeLength) - cubeLength / 2;
-      vel[j] = random(0.5) - 0.25;
+      vel[j] = temp;//random(0.5) - 0.25;
       acc[j] = 0;
     }
     
