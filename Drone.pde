@@ -16,9 +16,75 @@ class Drone extends Positional {
   public void update() {
     
     float[] pos = getPosition();
+    Add(vel, acc);
+    if (Magnitude(vel) < minSpeed) {
+      SetMag(vel, minSpeed);
+    }
     for (int i = 0; i < pos.length; i++) {
-      vel[i] += acc[i];
       pos[i] = CubeWrap(pos[i] + vel[i], cubeLength);
+    }
+    
+  }
+  
+  public void calculateSteeringForce() {
+    float[] pos = getPosition();
+    float[] avgVel = new float[pos.length];
+    float[] avgPos = new float[pos.length];
+    float[] displacementPos = new float[pos.length];
+    float[] newAcc = new float[pos.length];
+    
+    int numTooClose = 0;
+    Set<Drone> nearby = getWrappedNearby(nTree);
+    for (Drone d : nearby) {
+      float dist = WrappedDist(pos, d.getPosition(), cubeLength);
+      float[] minDistPoint = getMinDistPoint(d);
+      
+      Add(avgVel, Mult(Arrays.copyOf(d.vel, d.vel.length), (interactionRadius - dist) / interactionRadius));
+      Add(avgPos, minDistPoint);
+      
+      if (dist <= repulsionRadius) {
+        numTooClose++;
+        Add(displacementPos, minDistPoint); 
+      }
+    }
+    
+    // Include this drones velocity in the average
+    Add(avgVel, vel);
+    
+    if (nearby.size() > 0) {
+      
+      // Get the average velocity of all drones near this one
+      // +1 since this drone's velocity is included
+      Mult(avgVel, 1.0 / (nearby.size() + 1));
+      
+      // Add the alignment force
+      Subtract(avgVel, vel);
+      if (Magnitude(avgVel) > maxForce) {
+        SetMag(avgVel, maxForce);
+      }
+      Add(newAcc, Mult(avgVel, alignment));
+      
+      // Get the average position of all drones near this one
+      Mult(avgPos, 1.0 / nearby.size());
+      
+      // Add the cohesion force
+      Subtract(avgPos, pos);
+      float cohesionMagnitude = -1 * cohesion * (pow((interactionRadius - Magnitude(avgPos)) / interactionRadius, 2) - 1) * maxForce;
+      SetMag(avgPos, cohesionMagnitude);
+      Add(newAcc, avgPos);
+      
+      if (numTooClose > 0) {
+        Mult(displacementPos, 1.0 / numTooClose);
+        Subtract(displacementPos, pos);
+        Mult(displacementPos, -1);
+        float separationMagnitude = -1 * separation * (pow((repulsionRadius - Magnitude(displacementPos)) / repulsionRadius, 2) - 1) * maxForce;
+        SetMag(displacementPos, separationMagnitude);
+        Add(newAcc, displacementPos);
+      }
+      
+      Mult(Add(newAcc, acc), forceSmoothing);
+      acc = newAcc;
+      
     }
   }
   
@@ -36,15 +102,16 @@ class Drone extends Positional {
         float[] minDistPoint = getMinDistPoint(d);
         
         float opacity = 255 * (1.0 - pow(dist / interactionRadius, 2));
-        stroke(opacity);
+        stroke(255, opacity);
         line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
         // TODO: resolve line flicker when passing edge
+        // possibly has to do with NTree not giving all possible neighbors properly
+        
         // simulate double line draw
         if (!Arrays.equals(minDistPoint, nearbyPos)) {
-          line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
+          //line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
         }
         
-        ArrayList<float[]> nearbyReflectionPoints = getReflectionPoints(d, cubeLength);
         for (float[] nearbyReflectionPoint : getReflectionPoints(d, cubeLength)) {
           float[] closestReflectionPoint = pos;
           float minDist = Dist(pos, nearbyReflectionPoint);
@@ -55,16 +122,10 @@ class Drone extends Positional {
               closestReflectionPoint = reflectionPoint;
             }
           }
-          if (minDist < interactionRadius) {
+          if (minDist <= interactionRadius) {
             line(nearbyReflectionPoint[0], nearbyReflectionPoint[1], closestReflectionPoint[0], closestReflectionPoint[1]);
           }
         }
-        //for (int i = 0; i < nearbyReflectionPoints.size(); i++) {
-          
-        //  float[] curReflectionPoint = reflectionPoints.get(i);
-        //  float[] nearbyReflectionPoint = nearbyReflectionPoints.get(i);
-        //  line(nearbyReflectionPoint[0], nearbyReflectionPoint[1], curReflectionPoint[0], curReflectionPoint[1]);
-        //}
       }
       
       fill(255);
@@ -89,7 +150,7 @@ class Drone extends Positional {
     boolean[] dimWraps = new boolean[pos.length];
     
     for (int i = 0; i < pos.length; i++) {
-      if (abs(cubeLength / 2) - abs(pos[i]) < interactionRadius) {
+      if (abs(cubeLength / 2) - abs(pos[i]) <= interactionRadius) {
         dimWraps[i] = true;
       }
     }
@@ -102,6 +163,7 @@ class Drone extends Positional {
         int mult = (i / (int) pow(2, j)) % 2 == 0 ? 1 : -1;
         newCenter[j] = pos[j] * mult;
       }
+      
       candidates.addAll(nTree.queryRange(new AABC(newCenter, interactionRadius)));
     }
     for (Drone d : candidates) {
@@ -131,7 +193,7 @@ class Drone extends Positional {
     ArrayList<Integer> wrappedDims = new ArrayList<Integer>();
     
     for (int i = 0; i < pos.length; i++) {
-      if (abs(cubeLength / 2) - abs(pos[i]) < radius) {
+      if (abs(cubeLength / 2) - abs(pos[i]) <= radius) {
         wrappedDims.add(i);
       }
     }

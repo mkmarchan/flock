@@ -1,5 +1,5 @@
 class NTree<T extends Positional> {
-  final int CAPACITY = 1;
+  final int CAPACITY = 20;
   
   AABC boundary;
   ArrayList<T> points;
