@@ -44,7 +44,7 @@ void setup() {
     } else {
       for (int j = 0; j < dimensions; j++) {
         pos[j] = random(cubeLength / 2) - cubeLength / 4;
-        vel[j] = random(2) - 1;
+        vel[j] = random(0.2) - 0.1;
         acc[j] = 0;
       }
     }
@@ -80,6 +80,7 @@ void draw() {
     drones[i].display();
   }
   //println(frameRate);
+  saveFrame();
 }
 
 void mousePressed() {
