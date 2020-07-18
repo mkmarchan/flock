@@ -1,25 +1,29 @@
 import java.util.*;
 
 int dimensions = 2;
-int cubeLength = 400;
-int numDrones = 125;
+int cubeLength = 800;
+int numDrones = 150;
+int updatesPerFrame = 10;
 float droneRadius = 1;
 
 
-float interactionRadius = 50;
-float repulsionRadius = 25;
-float maxForce = 5;
-float minSpeed = 0.25;
-float alignment = 1;
-float cohesion = 0.4;
-float separation = 1;
-float forceSmoothing = 0.01;
+boolean mouseDown = false;
+boolean showLines = true;
+float interactionRadius = 55;
+float repulsionRadius = 40;
+float maxForce = 0.01;
+float minSpeed = 0.0;
+float alignment = 0.1;
+float cohesion = 0.5;
+float separation = 4;
+float gravity = 1;
+float forceSmoothing = 0;
 
 Drone[] drones;
 NTree nTree;
 
 void setup() {
-  size(400, 400);
+  size(800, 800);
   
   nTree = new NTree(dimensions, cubeLength / 2);
   
@@ -39,7 +43,7 @@ void setup() {
       vel[0] = -0.5;
     } else {
       for (int j = 0; j < dimensions; j++) {
-        pos[j] = random(cubeLength) - cubeLength / 2;
+        pos[j] = random(cubeLength / 2) - cubeLength / 4;
         vel[j] = random(2) - 1;
         acc[j] = 0;
       }
@@ -55,22 +59,33 @@ void draw() {
   
   fill(255);
   
-  nTree.clear();
-  for (int i = 0; i < drones.length; i++) {
-    nTree.insert(drones[i]);
-  }
-  //nTree.show();
+  for (int j = 0; j < updatesPerFrame; j++) {
+    
+    nTree.clear();
+    for (int i = 0; i < drones.length; i++) {
+      nTree.insert(drones[i]);
+    }
+    //nTree.show();
   
-  for (int i = 0; i < drones.length; i++) {
-    drones[i].calculateSteeringForce();
-  }
-  
-  for (int i = 0; i < drones.length; i++) {
-    drones[i].update();
+    for (int i = 0; i < drones.length; i++) {
+      drones[i].calculateSteeringForce();
+    }
+    
+    for (int i = 0; i < drones.length; i++) {
+      drones[i].update();
+    }
   }
   
   for (int i = 0; i < drones.length; i++) {
     drones[i].display();
   }
-  println(frameRate);
+  //println(frameRate);
+}
+
+void mousePressed() {
+  mouseDown = true;
+}
+
+void mouseReleased() {
+  mouseDown = false;
 }

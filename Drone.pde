@@ -69,7 +69,7 @@ class Drone extends Positional {
       
       // Add the cohesion force
       Subtract(avgPos, pos);
-      float cohesionMagnitude = -1 * cohesion * (pow((interactionRadius - Magnitude(avgPos)) / interactionRadius, 2) - 1) * maxForce;
+      float cohesionMagnitude = inverseDistMap(Magnitude(avgPos), interactionRadius, cohesion * maxForce, 0, 2); 
       SetMag(avgPos, cohesionMagnitude);
       Add(newAcc, avgPos);
       
@@ -77,15 +77,27 @@ class Drone extends Positional {
         Mult(displacementPos, 1.0 / numTooClose);
         Subtract(displacementPos, pos);
         Mult(displacementPos, -1);
-        float separationMagnitude = -1 * separation * (pow((repulsionRadius - Magnitude(displacementPos)) / repulsionRadius, 2) - 1) * maxForce;
+        float separationMagnitude = inverseDistMap(Magnitude(displacementPos), repulsionRadius, separation * maxForce, 0, 2);
         SetMag(displacementPos, separationMagnitude);
         Add(newAcc, displacementPos);
       }
-      
-      Mult(Add(newAcc, acc), forceSmoothing);
-      acc = newAcc;
-      
     }
+    
+    if (mouseDown) {
+      float gravityDist = WrappedDist(pos, new float[pos.length], cubeLength);
+      float[] gravityDir = Subtract(new float[pos.length], pos);
+      float gravityMagnitude = inverseDistMap(gravityDist, cubeLength, gravity * maxForce, 0, 2);
+      SetMag(gravityDir, gravityMagnitude);
+      Add(newAcc, gravityDir);
+    }
+    
+    Add(Mult(acc, forceSmoothing), Mult(newAcc, 1 - forceSmoothing));
+  }
+  
+  private float inverseDistMap(float dist, float maxDist, float maxOut, float minOut, float power) {
+    float distDiff = (maxDist - dist) / maxDist;
+    float maxTerm = 1.0 / pow(2, power);
+    return (1.0 / pow(distDiff + 1, power) - maxTerm) / (1 - maxTerm) * (maxOut - minOut) + minOut;
   }
   
   public void display() {
@@ -95,35 +107,36 @@ class Drone extends Positional {
     float[] pos = getPosition();
     if (pos.length == 2) {
       ArrayList<float[]> reflectionPoints = getReflectionPoints(this, cubeLength);
-      
-      for (Drone d : getWrappedNearby(nTree)) {
-        float[] nearbyPos = d.getPosition();
-        float dist = WrappedDist(pos, nearbyPos, cubeLength);
-        float[] minDistPoint = getMinDistPoint(d);
-        
-        float opacity = 255 * (1.0 - pow(dist / interactionRadius, 2));
-        stroke(255, opacity);
-        line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
-        // TODO: resolve line flicker when passing edge
-        // possibly has to do with NTree not giving all possible neighbors properly
-        
-        // simulate double line draw
-        if (!Arrays.equals(minDistPoint, nearbyPos)) {
-          //line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
-        }
-        
-        for (float[] nearbyReflectionPoint : getReflectionPoints(d, cubeLength)) {
-          float[] closestReflectionPoint = pos;
-          float minDist = Dist(pos, nearbyReflectionPoint);
-          for (float[] reflectionPoint : reflectionPoints) {
-            float thisDist;
-            if ((thisDist = Dist(reflectionPoint, nearbyReflectionPoint)) < minDist) {
-              minDist = thisDist;
-              closestReflectionPoint = reflectionPoint;
-            }
+      if (showLines) {
+        for (Drone d : getWrappedNearby(nTree)) {
+          float[] nearbyPos = d.getPosition();
+          float dist = WrappedDist(pos, nearbyPos, cubeLength);
+          float[] minDistPoint = getMinDistPoint(d);
+          
+          float opacity = 255 * (1.0 - pow(dist / interactionRadius, 2));
+          stroke(255, opacity);
+          line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
+          // TODO: resolve line flicker when passing edge
+          // possibly has to do with NTree not giving all possible neighbors properly
+          
+          // simulate double line draw
+          if (!Arrays.equals(minDistPoint, nearbyPos)) {
+            //line(minDistPoint[0], minDistPoint[1], pos[0], pos[1]);
           }
-          if (minDist <= interactionRadius) {
-            line(nearbyReflectionPoint[0], nearbyReflectionPoint[1], closestReflectionPoint[0], closestReflectionPoint[1]);
+          
+          for (float[] nearbyReflectionPoint : getReflectionPoints(d, cubeLength)) {
+            float[] closestReflectionPoint = pos;
+            float minDist = Dist(pos, nearbyReflectionPoint);
+            for (float[] reflectionPoint : reflectionPoints) {
+              float thisDist;
+              if ((thisDist = Dist(reflectionPoint, nearbyReflectionPoint)) < minDist) {
+                minDist = thisDist;
+                closestReflectionPoint = reflectionPoint;
+              }
+            }
+            if (minDist <= interactionRadius) {
+              line(nearbyReflectionPoint[0], nearbyReflectionPoint[1], closestReflectionPoint[0], closestReflectionPoint[1]);
+            }
           }
         }
       }
