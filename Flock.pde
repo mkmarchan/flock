@@ -21,11 +21,13 @@ float forceSmoothing = 0;
 
 Drone[] drones;
 NTree nTree;
+FaceLandmarkPlayer landmarkPlayer;
 
 void setup() {
   size(800, 800);
   
   nTree = new NTree(dimensions, cubeLength / 2);
+  landmarkPlayer = new FaceLandmarkPlayer("./landmarkCapture/data.json");
   
   drones = new Drone[numDrones];
   for (int i = 0; i < drones.length; i++) {
@@ -59,28 +61,29 @@ void draw() {
   
   fill(255);
   
-  for (int j = 0; j < updatesPerFrame; j++) {
-    
-    nTree.clear();
-    for (int i = 0; i < drones.length; i++) {
-      nTree.insert(drones[i]);
-    }
-    //nTree.show();
+  landmarkPlayer.getLandmarksAtTime(millis() / 1000.0).display();
   
-    for (int i = 0; i < drones.length; i++) {
-      drones[i].calculateSteeringForce();
-    }
+  //for (int j = 0; j < updatesPerFrame; j++) {
     
-    for (int i = 0; i < drones.length; i++) {
-      drones[i].update();
-    }
-  }
+  //  nTree.clear();
+  //  for (int i = 0; i < drones.length; i++) {
+  //    nTree.insert(drones[i]);
+  //  }
+  //  //nTree.show();
   
-  for (int i = 0; i < drones.length; i++) {
-    drones[i].display();
-  }
-  //println(frameRate);
-  saveFrame();
+  //  for (int i = 0; i < drones.length; i++) {
+  //    drones[i].calculateSteeringForce();
+  //  }
+    
+  //  for (int i = 0; i < drones.length; i++) {
+  //    drones[i].update();
+  //  }
+  //}
+  
+  //for (int i = 0; i < drones.length; i++) {
+  //  drones[i].display();
+  //}
+  ////println(frameRate);
 }
 
 void mousePressed() {
